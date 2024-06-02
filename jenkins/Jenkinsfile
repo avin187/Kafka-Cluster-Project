@@ -1,0 +1,90 @@
+pipeline {
+  agent any
+
+  environment {
+    TERRAFORM_DIR = 'terraform'
+    ANSIBLE_DIR = 'ansible'
+    ANSIBLE_HOSTS_FILE = 'ansible/inventory/hosts'
+  }
+
+  stages {
+    stage('Provision Infrastructure') {
+      steps {
+        script {
+          dir(TERRAFORM_DIR) {
+            sh 'terraform init'
+            sh 'terraform plan'
+            sh 'terraform apply -auto-approve'
+          }
+        }
+      }
+    }
+    stage('Capture Instance IPs') {
+      steps {
+        script {
+          dir(TERRAFORM_DIR) {
+            // Capture the instance IPs from the Terraform output
+            def instanceIps = sh(script: 'terraform output -json instance_ips', returnStdout: true).trim()
+            instanceIps = readJSON(text: instanceIps)
+
+            // Construct the content for the Ansible hosts file
+            def hostsContent = """[kafka_nodes]
+node1 ansible_host=${instanceIps[0]}
+node2 ansible_host=${instanceIps[1]}
+node3 ansible_host=${instanceIps[2]}
+
+[all:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/Users/avinmoosavi/Downloads/Kafka_Key.pem
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+"""
+            // Write the content to the Ansible hosts file
+            writeFile file: ANSIBLE_HOSTS_FILE, text: hostsContent
+          }
+        }
+      }
+    }
+    stage('Configure Kafka Nodes') {
+      steps {
+        script {
+          dir(ANSIBLE_DIR) {
+            sh 'ansible-playbook -i inventory/hosts playbooks/setup_docker.yml'
+          }
+        }
+      }
+    }
+    stage('Deploy Kafka with Docker Compose') {
+      steps {
+        script {
+          sh "docker-compose -f docker/docker-compose.yml up -d"
+        }
+      }
+    }
+    stage('Test Kafka Setup') {
+      steps {
+        script {
+          // Wait for Kafka to start
+          sh 'sleep 30'
+          
+          // Create a topic and test producer and consumer
+          sh """
+            docker exec -it kafka kafka-topics --create --topic test-topic --bootstrap-server localhost:9092
+            echo "Hello, Kafka!" | docker exec -i kafka kafka-console-producer --topic test-topic --bootstrap-server localhost:9092
+            docker exec -it kafka kafka-console-consumer --topic test-topic --bootstrap-server localhost:9092 --from-beginning --max-messages 1
+          """
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      script {
+        // Clean up resources if necessary
+        dir(TERRAFORM_DIR) {
+          sh 'terraform destroy -auto-approve'
+        }
+      }
+    }
+  }
+}

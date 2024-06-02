@@ -1,0 +1,41 @@
+---
+- name: Install required packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository
+  apt_repository:
+    repo: deb https://download.docker.com/linux/ubuntu focal stable
+    state: present
+
+- name: Update apt and install Docker
+  apt:
+    name: docker-ce
+    update_cache: yes
+    state: present
+
+- name: Determine the OS and architecture
+  shell: "uname -s && uname -m"
+  register: uname_result
+  changed_when: false
+
+- name: Set Docker Compose download URL
+  set_fact:
+    docker_compose_url: "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ uname_result.stdout_lines[0] }}-{{ uname_result.stdout_lines[1] }}"
+
+- name: Install Docker Compose
+  get_url:
+    url: "{{ docker_compose_url }}"
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'

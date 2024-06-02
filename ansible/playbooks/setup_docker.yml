@@ -1,0 +1,8 @@
+---
+- name: Install Docker and Docker Compose
+  hosts: kafka_nodes
+  become: yes
+  roles:
+    - common
+    - docker
+    - kafka

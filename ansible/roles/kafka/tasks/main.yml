@@ -1,0 +1,29 @@
+---
+- name: Create Kafka and Zookeeper directories
+  file:
+    path: /opt/kafka
+    state: directory
+
+- name: Copy Docker Compose file
+  copy:
+    src: docker-compose.yml
+    dest: /opt/kafka/docker-compose.yml
+    remote_src: no
+
+- name: Start Kafka and Zookeeper services
+  command: docker-compose up -d
+  args:
+    chdir: /opt/kafka
+
+- name: Wait for Kafka to start
+  pause:
+    seconds: 30
+
+- name: Create Kafka topic
+  command: docker exec -it kafka_kafka_1 kafka-topics --create --topic test-topic --bootstrap-server localhost:9092
+
+- name: Produce a message to Kafka topic
+  command: echo "Hello, Kafka!" | docker exec -i kafka_kafka_1 kafka-console-producer --topic test-topic --bootstrap-server localhost:9092
+
+- name: Consume a message from Kafka topic
+  command: docker exec -it kafka_kafka_1 kafka-console-consumer --topic test-topic --bootstrap-server localhost:9092 --from-beginning --max-messages 1

@@ -1,0 +1,9 @@
+[kafka_nodes]
+node1 ansible_host=<ip_1>
+node2 ansible_host=<ip_2>
+node3 ansible_host=<ip_3>
+
+[all:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/Users/avinmoosavi/Downloads/Kafka_Key.pem
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
