@@ -25,13 +25,13 @@ pipeline {
           dir(TERRAFORM_DIR) {
             // Capture the instance IPs from the Terraform output
             def instanceIps = sh(script: 'terraform output -json instance_ips', returnStdout: true).trim()
-            instanceIps = readJSON(text: instanceIps)
+            def ips = readJSON(text: instanceIps)
 
             // Construct the content for the Ansible hosts file
             def hostsContent = """[kafka_nodes]
-node1 ansible_host=${instanceIps[0]}
-node2 ansible_host=${instanceIps[1]}
-node3 ansible_host=${instanceIps[2]}
+node1 ansible_host=${ips[0]}
+node2 ansible_host=${ips[1]}
+node3 ansible_host=${ips[2]}
 
 [all:vars]
 ansible_user=ubuntu
