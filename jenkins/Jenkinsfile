@@ -29,9 +29,9 @@ pipeline {
 
             // Construct the content for the Ansible hosts file
             def hostsContent = """[kafka_nodes]
-node1 ansible_host=${ips[0]}
-node2 ansible_host=${ips[1]}
-node3 ansible_host=${ips[2]}
+${ips[0]} ansible_host=${ips[0]}
+${ips[1]} ansible_host=${ips[1]}
+${ips[2]} ansible_host=${ips[2]}
 
 [all:vars]
 ansible_user=ubuntu
