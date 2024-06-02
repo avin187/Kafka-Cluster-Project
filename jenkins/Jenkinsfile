@@ -78,9 +78,9 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no'
   }
 
   post {
-    always {
+    failure {
       script {
-        // Clean up resources if necessary
+        // Clean up resources on failure
         dir(TERRAFORM_DIR) {
           sh 'terraform destroy -auto-approve'
         }
